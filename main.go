@@ -2,6 +2,7 @@ package main
 
 import (
   "fmt"
+  "net"
   "io/ioutil"
   "encoding/hex"
 
@@ -9,10 +10,52 @@ import (
 )
 
 func main() {
+  addr, err := net.ResolveUDPAddr("udp", ":50000")
+  if err != nil {
+    panic(err)
+  }
+  fmt.Println("Listening on :50000")
+  conn, err := net.ListenUDP("udp", addr)
+  if err != nil {
+    panic(err)
+  }
+  handle_client(conn)
+}
+
+func handle_client(conn *net.UDPConn) {
+  for {
+    data := make([]byte, 1024)
+    length, addr, err := conn.ReadFromUDP(data)
+    fmt.Println(addr)
+    if err != nil {
+      panic(err)
+    }
+    fmt.Println(data[:length])
+    handle_packet(data[:length], conn, addr)
+  }
+}
+
+func handle_packet(data []byte, conn *net.UDPConn, addr *net.UDPAddr) {
+  id := data[0]
+  if id == 8 {
+    res := packet.NewOutgoingPacket()
+    res.WriteByte(0x09)
+    res.WriteByte(0x01)
+    res.WriteByte(0x45)
+    res.WriteByte(0x00)
+    res.WriteByte(0x01)
+    res.WriteByte(0x08)
+    res.WriteString("Hehehehe look at this custom message from a custom server!")
+    fmt.Println("Sending packet!")
+    res.Send(conn, addr)
+  }
+}
+
+func parse_server_info() {
   packet_str, _ := ioutil.ReadFile("packet-hex.txt")
   packet_bytes, _ := hex.DecodeString(string(packet_str))
 
-  packet := packet.NewPacketFromBytes(packet_bytes)
+  packet := packet.NewIncomingPacketFromBytes(packet_bytes)
   fmt.Println()
   i := 0
   for len(packet.Remaining()) > 0 {

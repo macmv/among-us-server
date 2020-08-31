@@ -1,2 +1,1 @@
-
-func 
+package main
