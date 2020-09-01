@@ -4,24 +4,26 @@ import (
   "fmt"
   "net"
 
+  "github.com/macmv/among-us-server/game"
   "github.com/macmv/among-us-server/packet"
 )
 
-type connection struct {
+type Connection struct {
   conn *net.UDPConn
   addr *net.UDPAddr
+  player *game.Player
 }
 
-func new_connection(conn *net.UDPConn, addr *net.UDPAddr) *connection {
-  c := connection{}
+func new_connection(conn *net.UDPConn, addr *net.UDPAddr) *Connection {
+  c := Connection{}
   c.conn = conn
   c.addr = addr
   return &c
 }
 
-func (c *connection) handle(data []byte) bool {
+func (c *Connection) handle(game *game.Game, data []byte) bool {
   p := packet.NewIncomingPacketFromBytes(data)
-  fmt.Println(data)
+  fmt.Println("Got data:", data)
   switch p.Id() {
   case 8:
     p.ReadShort()
@@ -30,8 +32,7 @@ func (c *connection) handle(data []byte) bool {
     p.ReadByte()
     p.ReadByte()
     name := p.ReadString()
-    fmt.Println("name: ", name)
-    fmt.Println("Got conneciton packet")
+
     out := packet.NewOutgoingPacket()
     out.WriteByte(0x00)
     out.WriteByte(0x52)
@@ -48,29 +49,21 @@ func (c *connection) handle(data []byte) bool {
     out.WriteByte(0x56)
     out.WriteByte(0xc8) // ping?
     out.WriteByte(0x12)
-    c.send_packet(out)
+    c.SendPacket(out)
 
-    out = packet.NewOutgoingPacket()
-    out.WriteByte(0x0a)
-    out.WriteByte(0x00)
-    out.WriteByte(0x01)
-    out.WriteByte(0xff)
-    c.send_packet(out)
-    // c.send_disconnect("MEMES")
+    c.player = game.AddPlayer(name, c.conn, c.addr)
     return false
   case 9:
-    fmt.Println("Got disconnect")
     return true
   }
-  fmt.Println("Unknown packet id:", p.Id())
   return false
 }
 
-func (c *connection) send_packet(out *packet.OugoingPacket) {
+func (c *Connection) SendPacket(out *packet.OutgoingPacket) {
   out.Send(c.conn, c.addr)
 }
 
-func (c *connection) send_disconnect(reason string) {
+func (c *Connection) send_disconnect(reason string) {
   res := packet.NewOutgoingPacket()
   res.WriteByte(0x09)
   res.WriteByte(0x01)

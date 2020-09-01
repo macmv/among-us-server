@@ -7,31 +7,31 @@ import (
   "strconv"
 )
 
-type OugoingPacket struct {
+type OutgoingPacket struct {
   data []byte
 }
 
-func NewOutgoingPacket() *OugoingPacket {
-  p := OugoingPacket{}
+func NewOutgoingPacket() *OutgoingPacket {
+  p := OutgoingPacket{}
   p.data = []byte{}
   return &p
 }
 
-func (o *OugoingPacket) Send(conn *net.UDPConn, addr *net.UDPAddr) {
+func (o *OutgoingPacket) Send(conn *net.UDPConn, addr *net.UDPAddr) {
   fmt.Println("Sending data", o.data)
   conn.WriteToUDP(o.data, addr)
 }
 
-func (o *OugoingPacket) WriteByte(val byte) {
+func (o *OutgoingPacket) WriteByte(val byte) {
   o.data = append(o.data, val)
 }
 
-func (o *OugoingPacket) WriteString(val string) {
+func (o *OutgoingPacket) WriteString(val string) {
   o.data = append(o.data, byte(len(val)))
   o.data = append(o.data, []byte(val)...)
 }
 
-func (o *OugoingPacket) WriteIP(val string) {
+func (o *OutgoingPacket) WriteIP(val string) {
   sections := strings.Split(val, ".")
   if len(sections) != 4 {
     panic("Invalid ip!")
