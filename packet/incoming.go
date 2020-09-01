@@ -13,7 +13,12 @@ type IncomingPacket struct {
 func NewIncomingPacketFromBytes(bytes []byte) *IncomingPacket {
   p := IncomingPacket{}
   p.data = bytes
+  p.index = 1
   return &p
+}
+
+func (p *IncomingPacket) Id() byte {
+  return p.data[0]
 }
 
 func (p *IncomingPacket) Remaining() []byte {

@@ -7,19 +7,11 @@ import (
   "encoding/hex"
 
   "github.com/macmv/among-us-server/packet"
+  "github.com/macmv/among-us-server/connection"
 )
 
 func main() {
-  addr, err := net.ResolveUDPAddr("udp", ":50000")
-  if err != nil {
-    panic(err)
-  }
-  fmt.Println("Listening on :50000")
-  conn, err := net.ListenUDP("udp", addr)
-  if err != nil {
-    panic(err)
-  }
-  handle_client(conn)
+  connection.Listen(":50000")
 }
 
 func handle_client(conn *net.UDPConn) {
@@ -38,16 +30,6 @@ func handle_client(conn *net.UDPConn) {
 func handle_packet(data []byte, conn *net.UDPConn, addr *net.UDPAddr) {
   id := data[0]
   if id == 8 {
-    res := packet.NewOutgoingPacket()
-    res.WriteByte(0x09)
-    res.WriteByte(0x01)
-    res.WriteByte(0x45)
-    res.WriteByte(0x00)
-    res.WriteByte(0x01)
-    res.WriteByte(0x08)
-    res.WriteString("Hehehehe look at this custom message from a custom server!")
-    fmt.Println("Sending packet!")
-    res.Send(conn, addr)
   }
 }
 
