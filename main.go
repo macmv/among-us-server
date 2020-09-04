@@ -11,7 +11,8 @@ import (
 )
 
 func main() {
-  connection.Listen(":50000")
+  go connection.Broadcast(":47777")
+  connection.Listen(":22023")
 }
 
 func handle_client(conn *net.UDPConn) {

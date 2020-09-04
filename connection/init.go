@@ -3,6 +3,7 @@ package connection
 import (
   "fmt"
   "net"
+  "time"
 
   "github.com/macmv/among-us-server/game"
 )
@@ -34,5 +35,28 @@ func Listen(port string) {
       fmt.Println("Closing connection with: ", addr)
       delete(connections, addr_string)
     }
+  }
+}
+
+func Broadcast(port string) {
+  addr, err := net.ResolveUDPAddr("udp", port)
+  if err != nil {
+    panic(err)
+  }
+  message := []byte{}
+  message = append(message, []byte{0x04, 0x02}...)
+  message = append(message, []byte("My Server")...)
+  message = append(message, []byte("~")...)
+  message = append(message, []byte("Open")...)
+  message = append(message, []byte("~")...)
+  message = append(message, []byte("69")...)
+  message = append(message, []byte("~")...)
+  ln, err := net.ListenUDP("udp", addr)
+  if err != nil {
+    panic(err)
+  }
+  ticker := time.NewTicker(time.Second)
+  for range ticker.C {
+    ln.WriteTo(message, addr)
   }
 }
