@@ -39,7 +39,7 @@ func Listen(port string) {
 }
 
 func Broadcast(port string) {
-  addr, err := net.ResolveUDPAddr("udp", port)
+  addr, err := net.ResolveUDPAddr("udp", "255.255.255.255" + port)
   if err != nil {
     panic(err)
   }

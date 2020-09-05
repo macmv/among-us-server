@@ -3,8 +3,10 @@ package packet
 import (
   "net"
   "fmt"
+  "math"
   "strings"
   "strconv"
+  "encoding/binary"
 )
 
 type OutgoingPacket struct {
@@ -24,6 +26,30 @@ func (o *OutgoingPacket) Send(conn *net.UDPConn, addr *net.UDPAddr) {
 
 func (o *OutgoingPacket) WriteByte(val byte) {
   o.data = append(o.data, val)
+}
+
+func (o *OutgoingPacket) WriteBytes(val []byte) {
+  o.data = append(o.data, val...)
+}
+
+func (o *OutgoingPacket) WriteInt(val int32) {
+  bytes := make([]byte, 4)
+  binary.LittleEndian.PutUint32(bytes, uint32(val))
+  o.data = append(o.data, bytes...)
+}
+
+func (o *OutgoingPacket) WriteFloat(val float32) {
+  bits := math.Float32bits(val)
+  bytes := make([]byte, 4)
+  binary.LittleEndian.PutUint32(bytes, bits)
+  o.data = append(o.data, bytes...)
+}
+
+func (o *OutgoingPacket) WriteDouble(val float64) {
+  bits := math.Float64bits(val)
+  bytes := make([]byte, 8)
+  binary.LittleEndian.PutUint64(bytes, bits)
+  o.data = append(o.data, bytes...)
 }
 
 func (o *OutgoingPacket) WriteString(val string) {
