@@ -1,0 +1,12 @@
+
+syntax = "proto3";
+option go_package = "github.com/macmv/among-us-server/proto";
+
+service AmongUs {
+  rpc Connection(stream Packet) returns (stream Packet) {}
+}
+
+message Packet {
+  string addr = 1;
+  bytes data = 2;
+}

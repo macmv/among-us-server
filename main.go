@@ -3,16 +3,64 @@ package main
 import (
   "fmt"
   "net"
+  "flag"
   "io/ioutil"
   "encoding/hex"
 
+  "google.golang.org/grpc"
+  pb "github.com/macmv/among-us-server/proto"
   "github.com/macmv/among-us-server/packet"
   "github.com/macmv/among-us-server/connection"
 )
 
+var (
+  flag_server = flag.Bool("server", false, "Set if this should be the server")
+  flag_port = flag.String("port", ":7444", "Used to change thr grpc port")
+)
+
 func main() {
-  go connection.Broadcast(":47777")
-  connection.Listen(":22023")
+  flag.Parse()
+  if *flag_server {
+    start_server(*flag_port)
+  } else {
+    start_client(*flag_port)
+  }
+}
+
+func start_client(server_port string) {
+  c := connection.New(server_port)
+  go c.StartBroadcast(":12345", ":47777")
+  c.ListenGame(":22023")
+}
+
+func start_server(port string) {
+  ln, err := net.Listen("tcp", port)
+  if err != nil {
+    panic(err)
+  }
+  server := grpc.NewServer()
+  pb.RegisterAmongUsServer(server, new_server())
+  server.Serve(ln)
+}
+
+type server struct {
+
+}
+
+func new_server() *server {
+  s := server{}
+  return &s
+}
+
+func (s *server) Connection(conn pb.AmongUs_ConnectionServer) error {
+  for {
+    p, err := conn.Recv()
+    if err != nil {
+      panic(err)
+    }
+    fmt.Println(p)
+  }
+  return nil
 }
 
 func handle_client(conn *net.UDPConn) {
