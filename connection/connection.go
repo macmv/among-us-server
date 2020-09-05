@@ -6,40 +6,48 @@ import (
 
   "github.com/macmv/among-us-server/game"
   "github.com/macmv/among-us-server/packet"
+  "github.com/macmv/among-us-server/packet_stream"
 )
 
 type Connection struct {
-  conn *net.UDPConn
-  addr *net.UDPAddr
   player *game.Player
+  outgoing_packets *packet_stream.OutgoingPacketStream
+  // incoming_packets *packet_stream.IncomingPacketStream
 }
 
 func new_connection(conn *net.UDPConn, addr *net.UDPAddr) *Connection {
   c := Connection{}
-  c.conn = conn
-  c.addr = addr
+  c.outgoing_packets = packet_stream.NewOutgoingPacketStream(conn, addr)
+  // c.incoming_packets = packet_stream.NewIncomingPacketStream(conn, addr)
   return &c
 }
 
 func (c *Connection) handle(game *game.Game, data []byte) bool {
   p := packet.NewIncomingPacketFromBytes(data)
-  fmt.Println("Got data:", data)
   packet_type := p.ReadByte()
   if packet_type == 9 {
     return true
-  } else if packet_type == 10 {
-    // packet was recieved
-    return false
   }
   p.ReadByte()
   id := p.ReadByte()
+
+  // confirm packet
+  if packet_type == 10 {
+    c.outgoing_packets.Confirm(id)
+    return false
+  }
+
+  fmt.Println("Got data:", data)
 
   out := packet.NewOutgoingPacket()
   out.WriteByte(0x0a)
   out.WriteByte(0x00)
   out.WriteByte(id)
   out.WriteByte(0xff)
-  c.SendPacket(out)
+  // DO NOT DO THIS
+  // This is ok because the packet does not need to be confirmed.
+  // Use c.SendPacket(out) for all other packets.
+  c.outgoing_packets.SendNoConfirm(out)
 
   switch packet_type {
   case 1: // ingame packet
@@ -54,7 +62,7 @@ func (c *Connection) handle(game *game.Game, data []byte) bool {
       p.ReadShort()
       p.ReadBytes(4)
       game_type := p.ReadString()
-      fmt.Println("Client is joining game with type ", game_type)
+      fmt.Println("Client is joining game with type", game_type)
     } else if val == 44 { // listing all servers
       c.player.SendServerList()
     }
@@ -68,16 +76,12 @@ func (c *Connection) handle(game *game.Game, data []byte) bool {
     name := p.ReadString()
     fmt.Println("Name:", name)
 
-    c.player = game.AddPlayer(name, c.conn, c.addr)
+    c.player = game.AddPlayer(name, c.outgoing_packets)
     return false
   case 12: // ping
     return false
   }
   return false
-}
-
-func (c *Connection) SendPacket(out *packet.OutgoingPacket) {
-  out.Send(c.conn, c.addr)
 }
 
 func (c *Connection) send_disconnect(reason string) {

@@ -2,7 +2,6 @@ package packet
 
 import (
   "net"
-  "fmt"
   "math"
   "strings"
   "strconv"
@@ -20,8 +19,11 @@ func NewOutgoingPacket() *OutgoingPacket {
 }
 
 func (o *OutgoingPacket) Send(conn *net.UDPConn, addr *net.UDPAddr) {
-  fmt.Println("Sending data", o.data)
   conn.WriteToUDP(o.data, addr)
+}
+
+func (o *OutgoingPacket) Data() []byte {
+  return o.data
 }
 
 func (o *OutgoingPacket) WriteByte(val byte) {

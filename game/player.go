@@ -1,22 +1,19 @@
 package game
 
 import (
-  "net"
-
   "github.com/macmv/among-us-server/packet"
+  "github.com/macmv/among-us-server/packet_stream"
 )
 
 type Player struct {
   name string
-  conn *net.UDPConn
-  addr *net.UDPAddr
+  outgoing_packets *packet_stream.OutgoingPacketStream
 }
 
-func new_player(name string, conn *net.UDPConn, addr *net.UDPAddr) *Player {
+func new_player(name string, outgoing_packets *packet_stream.OutgoingPacketStream) *Player {
   p := Player{}
   p.name = name
-  p.conn = conn
-  p.addr = addr
+  p.outgoing_packets = outgoing_packets
   return &p
 }
 
