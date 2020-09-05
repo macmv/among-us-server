@@ -24,37 +24,54 @@ func new_connection(conn *net.UDPConn, addr *net.UDPAddr) *Connection {
 func (c *Connection) handle(game *game.Game, data []byte) bool {
   p := packet.NewIncomingPacketFromBytes(data)
   fmt.Println("Got data:", data)
-  switch p.Id() {
-  case 8:
-    p.ReadShort()
-    p.ReadShort()
+  packet_type := p.ReadByte()
+  if packet_type == 9 {
+    return true
+  } else if packet_type == 10 {
+    // packet was recieved
+    return false
+  }
+  p.ReadByte()
+  id := p.ReadByte()
+
+  out := packet.NewOutgoingPacket()
+  out.WriteByte(0x0a)
+  out.WriteByte(0x00)
+  out.WriteByte(id)
+  out.WriteByte(0xff)
+  c.SendPacket(out)
+
+  switch packet_type {
+  case 1: // ingame packet
+    val := p.ReadByte()
+    if val == 5 { // wants to join a server
+      p.ReadShort()
+      c.player.JoinGame(p.ReadBytes(4))
+    } else if val == 21 { // join game
+      p.ReadByte()
+      p.ReadByte()
+      p.ReadInt()
+      p.ReadShort()
+      p.ReadBytes(4)
+      game_type := p.ReadString()
+      fmt.Println("Client is joining game with type ", game_type)
+    } else if val == 44 { // listing all servers
+      c.player.SendServerList()
+    }
+    return false
+  case 8: // connect packet
+    p.ReadByte()
+    p.ReadByte()
     p.ReadByte()
     p.ReadByte()
     p.ReadByte()
     name := p.ReadString()
-
-    out := packet.NewOutgoingPacket()
-    out.WriteByte(0x00)
-    out.WriteByte(0x52)
-    out.WriteByte(0x00)
-    out.WriteByte(0x0e)
-    out.WriteByte(0x01)
-    out.WriteByte(0x01) // num of servers
-    out.WriteByte(0x11)
-    out.WriteByte(0x00)
-    out.WriteByte(0x00)
-    out.WriteString("Master-4")
-    out.WriteIP("198.58.115.57")
-    out.WriteByte(0x07)
-    out.WriteByte(0x56)
-    out.WriteByte(0xc8) // ping?
-    out.WriteByte(0x12)
-    c.SendPacket(out)
+    fmt.Println("Name:", name)
 
     c.player = game.AddPlayer(name, c.conn, c.addr)
     return false
-  case 9:
-    return true
+  case 12: // ping
+    return false
   }
   return false
 }
