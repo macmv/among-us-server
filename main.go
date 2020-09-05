@@ -15,6 +15,7 @@ import (
 
 var (
   flag_server = flag.Bool("server", false, "Set if this should be the server")
+  flag_host = flag.Bool("host", false, "Set if the user is going to host the game")
   flag_port = flag.String("port", ":7444", "Used to change thr grpc port")
 )
 
@@ -23,14 +24,36 @@ func main() {
   if *flag_server {
     start_server(*flag_port)
   } else {
-    start_client(*flag_port)
+    if *flag_host {
+      start_host(*flag_port)
+    } else {
+      start_client(*flag_port)
+    }
+  }
+}
+
+func start_host(server_port string) {
+  c := connection.New(server_port)
+  for {
+    fmt.Println("Listening for broadcasts on localhost...")
+    conn := c.OpenUDP(":47777")
+    addr := c.ListenBroadcast(conn)
+    fmt.Println("Found game, listening for game packets")
+    c.StartHost(addr)
+    fmt.Println("Game closed, restarting")
   }
 }
 
 func start_client(server_port string) {
   c := connection.New(server_port)
-  go c.StartBroadcast(":12345", ":47777")
-  c.ListenGame(":22023")
+  for {
+    fmt.Println("Opening port 12345")
+    conn := c.OpenUDP(":12345")
+    fmt.Println("Broadcasting local game, and listening for game packets")
+    go c.StartBroadcast(conn, ":47777")
+    conn = c.OpenUDP(":22023")
+    c.ListenGame(conn)
+  }
 }
 
 func start_server(port string) {
@@ -44,21 +67,29 @@ func start_server(port string) {
 }
 
 type server struct {
-
+  host_addr string
+  connections map[pb.AmongUs_ConnectionServer]struct{}
 }
 
 func new_server() *server {
   s := server{}
+  s.connections = make(map[pb.AmongUs_ConnectionServer]struct{})
   return &s
 }
 
 func (s *server) Connection(conn pb.AmongUs_ConnectionServer) error {
+  s.connections[conn] = struct{}{}
   for {
     p, err := conn.Recv()
     if err != nil {
       panic(err)
     }
-    fmt.Println(p)
+    fmt.Println("Got packet", p)
+    for other_conn := range s.connections {
+      if other_conn != conn {
+        other_conn.Send(p)
+      }
+    }
   }
   return nil
 }
